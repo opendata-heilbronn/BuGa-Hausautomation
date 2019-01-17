@@ -1,0 +1,5 @@
+.vscode
+.vs
+**/include/README
+**/lib/README
+**/test/README
