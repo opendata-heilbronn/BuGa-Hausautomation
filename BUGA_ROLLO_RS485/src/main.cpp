@@ -198,9 +198,9 @@ void setup()
 {
   Serial.begin(115200);
   // Setup the button
-  pinMode(BUTTON_UP, INPUT);
+  pinMode(BUTTON_UP, INPUT_PULLUP);
 
-  pinMode(BUTTON_DOWN, INPUT);
+  pinMode(BUTTON_DOWN, INPUT_PULLUP);
 
   // Then set relay pins in output mode
   pinMode(RELAY_UP, OUTPUT);
