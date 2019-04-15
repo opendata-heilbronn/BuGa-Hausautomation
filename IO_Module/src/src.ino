@@ -156,7 +156,7 @@ void setup() {
     initVCCChannel();
 
     for (uint8_t i = 0; i < numInputPins; i++) {
-        pinMode(inputPins[i], INPUT_PULLUP);
+        pinMode(inputPins[i], INPUT);
     }
     for (uint8_t i = 0; i < numOutputPins; i++) {
         pinMode(outputPins[i], OUTPUT);
