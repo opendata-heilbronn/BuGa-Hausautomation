@@ -7,3 +7,4 @@ Repository for all Nodes connected to the MySensors RS485 bus at the BUGA.
 | 0       | Gateway          |
 | 1       | Rollo Controller |
 | 2       | IO Module        |
+| 3       | Farmbot Bridge   |
