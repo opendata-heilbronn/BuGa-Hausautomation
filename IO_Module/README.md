@@ -1,4 +1,6 @@
-# Gateway MySensors RS485 <> W5500 Ethernet
+# IO Module
+MySensors RS485 to digital inputs / outputs and analog inputs.
+
 ## Pinout
 | Pin  | Function   |
 | ---- | ---------- |

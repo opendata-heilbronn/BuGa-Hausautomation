@@ -1,3 +1,6 @@
+// ToDo
+// - publish io state change to network
+
 // Enable debug prints to serial monitor
 #define MY_DEBUG
 #define IO_DEBUG
@@ -29,11 +32,11 @@
 #define REFERENCE_VOLTAGE   1.172   // determined by trial and error for this STM32, enable IO_DEBUG and tweak value
 #define ADC_STEPS           4096
 
-#define cidOffsetAnalog 0x10
-#define cidOffsetInput 0x20
-#define cidOffsetOutput 0x30
+#define cidOffsetAnalog 0x20
+#define cidOffsetInput 0x40
+#define cidOffsetOutput 0x60
 
-#define PINS_PER_TYPE 16
+#define PINS_PER_TYPE 32
 const uint8_t analogPins[] = {PA2, PA3, PA4, PA5};                                      // child id range 0x10-0x1F
 const uint8_t inputPins[] = {PA6, PA7, PB0, PB1};                                       //                0x20-0x2F
 const uint8_t outputPins[] = {PB5, PB4, PB3, PA15, PB7, PB6, PB15, PB14, PB13, PB12};   //                0x30-0x3F
@@ -45,13 +48,13 @@ float analogVals[numAnalogPins], adcRef;
 
 // convert child id to pin on µC, returns 255 if not found
 uint8_t cidToPin(uint8_t cid) {
-    if(cid >= cidOffsetAnalog && cid < cidOffsetAnalog + PINS_PER_TYPE) {
+    if(cid >= cidOffsetAnalog && cid < cidOffsetAnalog + numAnalogPins) {
         return analogPins[cid - cidOffsetAnalog];
     }
-    else if(cid >= cidOffsetInput && cid < cidOffsetInput + PINS_PER_TYPE) {
+    else if(cid >= cidOffsetInput && cid < cidOffsetInput + numInputPins) {
         return inputPins[cid - cidOffsetInput];
     }
-    else if(cid >= cidOffsetOutput && cid < cidOffsetOutput + PINS_PER_TYPE) {
+    else if(cid >= cidOffsetOutput && cid < cidOffsetOutput + numOutputPins) {
         return outputPins[cid - cidOffsetOutput];
     }
     else {
@@ -171,13 +174,13 @@ void presentation() {
     sendSketchInfo("IO_Module", "1.0");
 
     for (uint8_t i = 0; i < numAnalogPins; i++) {
-        present(cidOffsetAnalog + i, S_CUSTOM);
+        present(cidOffsetAnalog + i, S_CUSTOM, ("Analog_" + String(i + 1)).c_str());
     }
     for (uint8_t i = 0; i < numInputPins; i++) {
-        present(cidOffsetInput + i, S_BINARY);
+        present(cidOffsetInput + i, S_BINARY, ("Input_" + String(i + 1)).c_str());
     }
     for (uint8_t i = 0; i < numOutputPins; i++) {
-        present(cidOffsetOutput + i, S_BINARY);
+        present(cidOffsetOutput + i, S_BINARY, ("Output_" + String(i + 1)).c_str());
     }
 }
 
