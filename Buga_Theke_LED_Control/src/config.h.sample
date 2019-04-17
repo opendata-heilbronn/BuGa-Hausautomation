@@ -1,0 +1,4 @@
+// rename to config.h
+#define OTA_PASSWORD "otapass"
+#define WIFI_SSID "ssidhere"
+#define WIFI_PASS "yoursecretpass"
