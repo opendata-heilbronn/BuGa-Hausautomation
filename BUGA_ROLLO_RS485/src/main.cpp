@@ -77,7 +77,7 @@ unsigned long lastDebounceTimeDown = 0;
 unsigned long debounceDelay = 50;
 
 
-#define SHUTTER_TIME      10000 // How long the shutter takes to fully unroll from completely rolled up
+#define SHUTTER_TIME      13500 // How long the shutter takes to fully unroll from completely rolled up
 #define SHUTTER_OVERSHOOT 2000  // How long to keep the motor running at the end so it always stays "calibrated"
 int32_t currentShutterProgress = SHUTTER_TIME, shutterTarget = -SHUTTER_OVERSHOOT; // defaults, so shutter goes open on startup
 
@@ -220,6 +220,11 @@ void presentation()
   // Register all sensors to gw (they will be created as child devices)
   present(CHILD_ID, S_COVER);
 
+  // sendStatus(); 
+}
+
+uint32_t hassInitDelay = 5000;
+void hassInit() {
   sendStatus();
 }
 
@@ -227,6 +232,11 @@ uint32_t lastDebugTime = 0;
 void loop()
 {
   shutterLoop();
+
+  if(hassInitDelay > 0 && millis() > hassInitDelay) {
+    hassInit();
+    hassInitDelay = 0;
+  }
 
   if(millis() - lastDebugTime >= 100) {
     lastDebugTime = millis();
