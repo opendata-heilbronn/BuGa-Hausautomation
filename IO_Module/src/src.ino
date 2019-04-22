@@ -3,7 +3,7 @@
 
 // Enable debug prints to serial monitor
 #define MY_DEBUG
-#define IO_DEBUG
+// #define IO_DEBUG
 
 #define MY_NODE_ID 2
 
@@ -29,6 +29,7 @@
 // averaging settings for analog input
 #define AVERAGING_FACTOR    50
 #define AVERAGING_INTERVAL  10  // ms
+#define INPUT_POLL_INTERVAL 10  // ms
 #define REFERENCE_VOLTAGE   1.172   // determined by trial and error for this STM32, enable IO_DEBUG and tweak value
 #define ADC_STEPS           4096
 
@@ -42,7 +43,9 @@ const uint8_t inputPins[] = {PA6, PA7, PB0, PB1};                               
 const uint8_t outputPins[] = {PB5, PB4, PB3, PA15, PB7, PB6, PB15, PB14, PB13, PB12};   //                0x30-0x3F
 const uint8_t numInputPins = sizeof(inputPins) / sizeof(inputPins[0]), numOutputPins = sizeof(outputPins) / sizeof(outputPins[0]),
               numAnalogPins = sizeof(analogPins) / sizeof(analogPins[0]);
+bool lastPinStates[numInputPins] = {1};
 
+uint32_t lastInputPoll = 0;
 uint32_t lastMeasure = 0;
 float analogVals[numAnalogPins], adcRef;
 
@@ -137,6 +140,25 @@ void runAveraging() {
     }
 }
 
+void inputChangeCallback(uint8_t inputId, bool newState) {
+    MyMessage msg(cidOffsetInput + inputId, V_TRIPPED);
+    send(msg.set(newState));
+}
+
+void runInputPoll() {
+    if(millis() - lastInputPoll >= INPUT_POLL_INTERVAL) {
+        lastInputPoll = millis();
+
+        for (uint8_t i = 0; i < numInputPins; i++) {
+            bool curState = digitalRead(inputPins[i]);
+            if (lastPinStates[i] != curState) {
+                lastPinStates[i] = curState;
+                inputChangeCallback(i, curState);
+            }
+        }
+    }
+}
+
 void initAveraging() {
     for (uint8_t i = 0; i < numAnalogPins; i++) {
         analogVals[i] = analogRead(analogPins[i]);
@@ -171,16 +193,32 @@ void setup() {
 }
 
 void presentation() {
-    sendSketchInfo("IO_Module", "1.0");
-
     for (uint8_t i = 0; i < numAnalogPins; i++) {
         present(cidOffsetAnalog + i, S_CUSTOM, ("Analog_" + String(i + 1)).c_str());
     }
     for (uint8_t i = 0; i < numInputPins; i++) {
-        present(cidOffsetInput + i, S_BINARY, ("Input_" + String(i + 1)).c_str());
+        // handle inputs as door, as it is the best available binary sensor
+        present(cidOffsetInput + i, S_DOOR, ("Input_" + String(i + 1)).c_str());
     }
     for (uint8_t i = 0; i < numOutputPins; i++) {
         present(cidOffsetOutput + i, S_BINARY, ("Output_" + String(i + 1)).c_str());
+    }
+
+    sendSketchInfo("IO_Module", "1.0");
+}
+
+uint32_t hassInitDelay = 5000;
+void hassInit() {
+    MyMessage msgTemp;
+    for (uint8_t i = 0; i < numAnalogPins; i++) {
+        receive(build(msgTemp, MY_NODE_ID, cidOffsetAnalog + i, C_REQ, V_VAR1));
+        receive(build(msgTemp, MY_NODE_ID, cidOffsetAnalog + i, C_REQ, V_VOLTAGE));
+    }
+    for (uint8_t i = 0; i < numInputPins; i++) {
+        receive(build(msgTemp, MY_NODE_ID, cidOffsetInput + i, C_REQ, V_TRIPPED));
+    }
+    for (uint8_t i = 0; i < numOutputPins; i++) {
+        receive(build(msgTemp, MY_NODE_ID, cidOffsetOutput + i, C_REQ, V_STATUS));
     }
 }
 
@@ -189,6 +227,12 @@ void presentation() {
 
 void loop() {
     runAveraging();
+    runInputPoll();
+
+    if(hassInitDelay > 0 && millis() > hassInitDelay) {
+        hassInit();
+        hassInitDelay = 0;
+    }
 
     // activate each output in turn
     // if(millis() - lastTest > 1000) {
@@ -208,11 +252,14 @@ void receive(const MyMessage &message) {
             case V_STATUS:
                 bool state = message.getBool();
                 writeDigitalChildId(message.sensor, state);
+                MyMessage msg(message.sensor, message.type);
+                send(msg.set(state));
             break;
         }
     }
     else if (message.getCommand() == C_REQ) {
         switch (message.type) {
+            case V_TRIPPED:     // digital value
             case V_STATUS:      // digital value
                 if (message.sensor >= cidOffsetInput && message.sensor < cidOffsetOutput + PINS_PER_TYPE) { // reading of inputs and outputs is supported
                     bool value = readDigitalChildId(message.sensor);
